@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi Step FORM</title>
+</head>
+
+<body>
+
+    <style>
+        div#itlMain {
+            display: block;
+            /* text-align: center; */
+            padding: 15px;
+            background: oldlace;
+        }
+
+        .questions {
+            padding: 0 0 60px 0;
+        }
+
+        .questions button {
+            margin: 5px 5px;
+            width: fit-content;
+            border-radius: 5px;
+            -webkit-border-radius: 5px;
+            -moz-border-radius: 5px;
+            height: 30px !important;
+            color: #f7f7f7;
+            box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            font-size: 16px;
+            border: 0;
+            outline: 0;
+            cursor: pointer;
+            background-color: #9c0a0e;
+            transition: all 0.3s linear;
+        }
+
+        .questions button:hover {
+            background: white;
+            color: black;
+        }
+
+        .pm-code {
+            position: absolute;
+            width: 62%;
+            background: darkred;
+            z-index: 9999;
+            border-radius: 15px;
+            position: fixed;
+            right: 15px;
+            top: 15px;
+        }
+
+        .pm-code ul li {
+            background: black;
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .footer-bar button {
+            background: black;
+            border-radius: 5px;
+            color: white;
+            font-size: 20px;
+            padding: 0 25px;
+            font-weight: bold;
+            transition: all 0.2s linear;
+            cursor: pointer;
+        }
+
+        .footer-bar button:not(:disabled):hover {
+            background: black;
+            color: #9c0a0e;
+        }
+
+        .footer-bar button:disabled {
+            opacity: 0.5;
+        }
+    </style>
+
+
+
+    <div id="itlMain" class="itl-main">
+        <h1>Auto Generation SKU</h1>
+        <div>
+            <div class="pm-code" v-if="pmc.length">
+
+                <ul style="display: flex;list-style: none;">
+                    <li v-for="(option, index) in pmc" :key="index">
+                        <span v-if="index == 0">{{option}}</span>
+                        <span v-if="index != 0 && option != null">-{{option}}</span>
+                    </li>
+                </ul>
+            </div>
+
+
+            <div class="q-block">
+                <!-- Questions -->
+                <div class="questions" v-if="currentStep == question.step && shouldShow(currentStep)"
+                    v-for="(question,index) in questions" :key="index">
+                    <h3>{{ question.question }}</h3>
+                    <div class="o-block" v-if="question.options">
+                        <button v-for="(option, jndex) in question.options" v-if="shouldOpShow(option)" :key="jndex"
+                            @click="selectOption(option)">
+                            {{ option.text }}
+                        </button>
+                    </div>
+                </div>
+                <!-- Acessories -->
+                <div class="acessories" v-if="currentStep == questions.length + 1">
+                    <div v-for="(accessory, andex) in acessories" v-if="shouldOpShow(accessory)" :key="andex">
+                        <h3>{{ accessory.question }}</h3>
+                        <div v-for="(option, optionIndex) in accessory.options" :key="optionIndex">
+                            <label>
+                                <input type="radio" :name="'accessory-' + andex"
+                                    @change="updateSelectedAccessories(andex, optionIndex)" :value="option.text">
+                                {{ option.text }}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <!-- Form Complete -->
+            <div v-if="submitted && currentStep > questions.length" class="footer-block">
+                <!-- <p>Selected Options:</p> -->
+                <!-- <ul style="display: flex;">
+                    <li v-for="(option, index) in selectedOptions" :key="index">
+                        <span v-if="index == 0">{{ option.text }}</span>
+                        <span v-if="index != 0"> - {{ option.text }}</span>
+                    </li>
+                </ul> -->
+
+                <!-- <div class="pm-code">
+                    <h2>Product Model Code:</h2>
+                    <ul style="display: flex;list-style: none;">
+                        <li v-for="(option, index) in pmc" :key="index">
+                            <span v-if="index == 0">{{option}}</span>
+                            <span v-if="index != 0 && option != null">-{{option}}</span>
+                        </li>
+                    </ul>
+                </div> -->
+
+                <h4>Please Fill Form:</h4>
+
+                <form class="itl-contact-form" @submit.prevent="submitForm">
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" v-model="formData.name" required>
+
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" v-model="formData.email" required>
+
+                    <label for="phone">Phone/Mobile:</label>
+                    <input type="tel" id="phone" v-model="formData.phone" required>
+
+                    <button type="submit">Submit</button>
+                </form>
+
+                <!-- <div v-if="submitted">
+                    <h3>Submitted Information:</h3>
+                    <p>Name: {{ formData.name }}</p>
+                    <p>Email: {{ formData.email }}</p>
+                    <p>Phone/Mobile: {{ formData.phone }}</p>
+                    <p>IP Address: {{ userIP }}</p>
+                    <p>Location: {{ userLocation }}</p>
+                </div> -->
+            </div>
+
+            <!-- Footer BACK & NEXT -->
+            <div class="footer-bar">
+                <button v-if="currentStep > 1" @click="prevStep">Back</button>
+                <button v-if="currentStep < questions.length" @click="nextStep" :disabled="!checkDisable()">Next</button>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+    <script>
+        var itlFilter = new Vue({
+            el: '#itlMain',
+            data: {
+                questions: [{
+                        "question": "Does compliance with the IMC, IFC, or IBC need to be met?",
+                        "step": 1,
+                        "options": [{
+                                "text": "Yes",
+                                "nextStep": 2,
+                                "blockText": "D1000",
+
+                            },
+                            {
+                                "text": "No",
+                                "nextStep": 2,
+                                "blockText": "",
+                            }
+                        ],
+                        condition: null
+                    },
+                    {
+                        "question": "Do you need NFPA101 (Life Safety Code) compliance?",
+                        "step": 2,
+                        "options": [{
+                                "text": "Yes",
+                                "nextStep": 4,
+                                "blockText": "D1000",
+                                "subOptions": [{
+                                        "text": "ClockBox",
+                                        "link": "Link to description/comparison"
+                                    },
+                                    {
+                                        "text": "Clockbox Pro",
+                                        "link": "Link to description/comparison"
+                                    }
+                                ]
+                            },
+                            {
+                                "text": "No",
+                                "nextStep": 'check_condition',
+                                "blockText": "",
+                            }
+                        ],
+                        condition: null
+                    },
+                    {
+                        "question": "Do you want stages of pre-suppression or monitoring?",
+                        "step": 3,
+                        "options": [{
+                                "text": "Yes",
+                                "nextStep": 4,
+                                "blockText": "D1000",
+                            },
+                            {
+                                "text": "No",
+                                "nextStep": 4,
+                                "blockText": "DS",
+                            }
+                        ],
+                        condition: [{
+                                step: 1,
+                                text: 'No'
+                            },
+                            {
+                                step: 2,
+                                text: 'No'
+                            }
+                        ],
+                        conditionRelation: 'AND'
+                    },
+                    {
+                        "question": "Are you protecting a 30” or 36” range?",
+                        "step": 4,
+                        "options": [{
+                                "text": "30”",
+                                "nextStep": 5,
+                                "blockText": "D1030",
+                            },
+                            {
+                                "text": "36”",
+                                "nextStep": 5,
+                                "blockText": "D1036",
+                            }
+                        ],
+                        condition: null
+                    },
+                    {
+                        "question": "How will they be venting the system?",
+                        "step": 5,
+                        "options": [{
+                                "text": "Recirculating",
+                                "nextStep": "Either",
+                                "blockText": "F",
+                                "subOptions": [{
+                                        "text": "D1030-F- with High Performance Fan"
+                                    },
+                                    {
+                                        "text": "D1036-F- with High Performance Fan"
+                                    }
+                                ]
+                            },
+                            {
+                                "text": "Rear Discharging",
+                                "nextStep": "D1000",
+                                "blockText": "R",
+                                condition: "D1000",
+                                "subOptions": [{
+                                        "text": "D1030-R- with High Performance Fan"
+                                    },
+                                    {
+                                        "text": "D1036-R- with High Performance Fan"
+                                    }
+                                ]
+                            },
+                            {
+                                "text": "Top Discharging – external In-line fan",
+                                "nextStep": "Either",
+                                "blockText": "D",
+                                "blockText1": "IF",
+                            },
+                            {
+                                "text": "Top Discharging – external Wall mount fan",
+                                "nextStep": "D1000",
+                                condition: "D1000",
+                                "blockText": "D",
+                                "blockText1": "WF",
+                            },
+                            {
+                                "text": "Top Discharging – external Roof mount fan",
+                                "nextStep": "D1000",
+                                condition: "D1000",
+                                "blockText": "D",
+                                "blockText1": "RF",
+                            },
+                            {
+                                "text": "Top Discharging – external 3rd party fan",
+                                "nextStep": "Either",
+                                "blockText": "D",
+
+                            }
+                        ],
+                        condition: null
+                    },
+                    {
+                        "question": "What is the fuel source of the range that you will be protecting?",
+                        "step": 6,
+                        "options": [{
+                                "text": "Gas",
+                                "nextStep": "Either",
+                                "blockText": "G",
+                            },
+                            {
+                                "text": "Electric 220VAC 14-50R",
+                                "nextStep": "Either",
+                                "blockText": "E",
+                            },
+                            {
+                                "text": "Electric 220VAC 10-50R",
+                                "nextStep": "Either",
+                                "blockText": "E",
+                            },
+                            {
+                                "text": "Electric 220VAC 6-20R",
+                                "nextStep": "Either",
+                                "blockText": "E",
+                            },
+                            {
+                                "text": "Electric 120VAC 5-15R",
+                                "nextStep": "Either",
+                                "blockText": "E",
+                            },
+                            {
+                                "text": "Electric 120VAC 5-20R",
+                                "nextStep": "Either",
+                                "blockText": "E",
+                            },
+                            {
+                                "text": "Dual Fuel – Gas & 220VAC 14-50R",
+                                "nextStep": "Either",
+                                "blockText": "DED",
+                            },
+                            {
+                                "text": "Dual Fuel – Gas & 220VAC 10-50R",
+                                "nextStep": "Either",
+                                "blockText": "DED",
+                            },
+                            {
+                                "text": "Dual Fuel – Gas & 220VAC 6-20R",
+                                "nextStep": "Either",
+                                "blockText": "DED",
+                            },
+                            {
+                                "text": "Dual Fuel – Gas & 120VAC 5-15R",
+                                "nextStep": "Either",
+                                "blockText": "DED",
+                            },
+                            {
+                                "text": "Dual Fuel – Gas & 120VAC 5-20R",
+                                "nextStep": "Either",
+                                "blockText": "DED",
+                            },
+                            {
+                                "text": "Dual Receptacle – (2) 220VAC 6-20R",
+                                "nextStep": "Either",
+                                "blockText": "DRD",
+                            },
+                            {
+                                "text": "Dual Receptacle – (2) 120VAC 5-15R",
+                                "nextStep": "Either",
+                                "blockText": "DRD",
+                            },
+                            {
+                                "text": "Dual Receptacle – (2) 120VAC 5-20R",
+                                "nextStep": "Either",
+                                "blockText": "DRD",
+                            }
+                        ],
+                        condition: null
+                    },
+                    {
+                        "question": "What color is required for the hood?",
+                        "step": 7,
+                        "options": [{
+                                "text": "Stainless Steel – Standard Finish for D1000",
+                                "nextStep": "Either",
+                                "blockText": "Stainless Steel",
+                            },
+                            {
+                                "text": "Powder Coat Black",
+                                "nextStep": "Either",
+                                "blockText": "Powder Coat Black",
+                            },
+                            {
+                                "text": "Powder Coat White – Standard Finish for DS",
+                                "nextStep": "DS",
+                                "blockText": "Coat White",
+                            },
+                            {
+                                "text": "Custom Color",
+                                "nextStep": "Either",
+                                "blockText": "Custom Color",
+                            }
+                        ],
+                        condition: null
+                    }
+                ],
+                formData: {
+                    name: '',
+                    email: '',
+                    phone: ''
+                },
+                submitted: false,
+                userIP: null,
+                userLocation: null,
+                selectedOptions: [],
+                currentStep: 1,
+                acessories: [{
+                        "question": "Is a field discharge test required?",
+                        step: 1,
+                        "options": [{
+                                "text": "Yes",
+                                "lineItem": "Tank Test"
+                            },
+                            {
+                                "text": "No",
+                                "lineItem": null
+                            }
+                        ]
+                    },
+                    {
+                        "question": "Extended Warranty",
+                        step: 2,
+                        "options": [{
+                                "text": "Yes",
+                                "lineItem": "EX"
+                            },
+                            {
+                                "text": "No",
+                                "lineItem": null
+                            }
+                        ]
+                    },
+                    {
+                        "question": "Manual Pull Station (included with NFPA101 and NFPA101 Pro upgrade)",
+                        step: 3,
+                        "options": [{
+                                "text": "Yes",
+                                "lineItem": "MPK"
+                            },
+                            {
+                                "text": "No",
+                                "lineItem": null
+                            }
+                        ]
+                    },
+                    {
+                        "question": "ClockBox (included with NFPA101 upgrade)",
+                        step: 4,
+                        "options": [{
+                                "text": "Yes",
+                                "lineItem": "CLBX"
+                            },
+                            {
+                                "text": "No",
+                                "lineItem": null
+                            }
+                        ]
+                    },
+                    {
+                        "question": "ClockBox Pro (included with NFPA101 Pro upgrade)",
+                        step: 5,
+                        "options": [{
+                                "text": "Yes",
+                                "lineItem": "CLBX Pro"
+                            },
+                            {
+                                "text": "No",
+                                "lineItem": null
+                            }
+                        ]
+                    },
+                    {
+                        "question": "ADA – Handicap Accessible Fan & Light Controls (integrated with ClockBox Pro)",
+                        step: 6,
+                        "options": [{
+                                "text": "Yes",
+                                "lineItem": "ADA"
+                            },
+                            {
+                                "text": "No",
+                                "lineItem": null
+                            }
+                        ]
+                    },
+                    {
+                        "question": "Limiting Speed Control (D1000 Only - not available with NFPA101 compliant models)",
+                        step: 7,
+                        "options": [{
+                                "text": "Yes",
+                                "lineItem": "LSC"
+                            },
+                            {
+                                "text": "No",
+                                "lineItem": null
+                            }
+                        ],
+                        condition: "D1000",
+                    },
+                    {
+                        "question": "Make-Up Air / Damper Control Module (D1000 Only)",
+                        step: 8,
+                        "options": [{
+                                "text": "Yes",
+                                "lineItem": "MACM"
+                            },
+                            {
+                                "text": "No",
+                                "lineItem": null
+                            }
+                        ],
+                        condition: "D1000",
+                    },
+                    {
+                        "question": "Strobe Light & Alarm (D1000 Only)",
+                        step: 9,
+                        "options": [{
+                                "text": "Yes",
+                                "lineItem": "Strobe"
+                            },
+                            {
+                                "text": "No",
+                                "lineItem": null
+                            }
+                        ],
+                        condition: "D1000",
+                    },
+                    {
+                        "question": "Common Fan Use Control (D1000 Only)",
+                        step: 10,
+                        "options": [{
+                                "text": "Yes",
+                                "lineItem": "CFCS"
+                            },
+                            {
+                                "text": "No",
+                                "lineItem": null
+                            }
+                        ],
+                        condition: "D1000",
+                    },
+                    {
+                        "question": "Control for Multiple Fans (D1000 Only)",
+                        step: 11,
+                        "options": [{
+                                "text": "Yes",
+                                "lineItem": "BPFC"
+                            },
+                            {
+                                "text": "No",
+                                "lineItem": null
+                            }
+                        ],
+                        condition: "D1000",
+                    },
+                    {
+                        "question": "Top Cover – (D1000 Only) Not available on Recirculating or Rear Discharging NFPA101 hoods",
+                        step: 12,
+                        "options": [{
+                                "text": "Yes",
+                                "lineItems": [{
+                                        "text": "TCF",
+                                        "for": "Recirculating Units"
+                                    },
+                                    {
+                                        "text": "TCD",
+                                        "for": "Top Discharge Units"
+                                    },
+                                    {
+                                        "text": "TCR",
+                                        "for": "Rear discharge Units"
+                                    }
+                                ]
+                            },
+                            {
+                                "text": "No",
+                                "lineItem": null
+                            }
+                        ],
+                        condition: "D1000",
+                    }
+                ],
+                selectedAcessories: [],
+                pmc: [],
+                blockStep: 0,
+                accessoriesBlock: '',
+            },
+            filters: {},
+            computed: {},
+            methods: {
+                shouldShow(cStep) {
+                    var sFlag = false;
+                    if (this.questions[cStep - 1].step == cStep) {
+                        if (this.questions[cStep - 1].condition == null) {
+                            sFlag = true;
+                        } else {
+                            var conditionCount = 0;
+                            this.questions[cStep - 1].condition.forEach(cond => {
+                                this.selectedOptions.forEach(sOpt => {
+                                    if (sOpt.step == cond.step && sOpt.text == cond.text) {
+                                        conditionCount++
+                                    }
+                                });
+                            });
+                            if (this.questions[cStep - 1].conditionRelation == 'AND') {
+                                sFlag = this.questions[cStep - 1].condition.length == conditionCount ? true :
+                                    false;
+                            }
+                            if (this.questions[cStep - 1].conditionRelation == 'OR') {
+                                sFlag = conditionCount > 0 ? true : false;
+                            }
+                        }
+                    }
+                    if (sFlag) {
+                        if (this.blockStep == cStep) {
+                            this.blockStep = 0;
+                        }
+                        this.currentStep = cStep;
+                    } else {
+                        this.blockStep = cStep;
+                        this.currentStep = cStep + 1;
+                    }
+                    return sFlag
+                },
+                shouldOpShow(op) {
+                    var opFlag = false;
+                    if (op.condition) {
+                        if (this.pmc[0].charAt(1) == op.condition.charAt(1)) {
+                            opFlag = true;
+                        } else {
+                            opFlag = false;
+                        }
+                    } else {
+                        opFlag = true;
+                    }
+                    return opFlag
+                },
+                selectOption(option) {
+                    // If an option is already selected for this question, update it; otherwise, add a new entry.
+                    const existingIndex = this.selectedOptions.findIndex(item => item.step === this
+                        .currentStep);
+
+                    if (existingIndex !== -1) {
+
+                        this.$set(this.selectedOptions, existingIndex, {
+                            step: this.currentStep,
+                            text: option.text,
+                            blockText: option.blockText,
+                            blockText1: option.blockText1,
+                        });
+                    } else {
+
+                        this.selectedOptions.push({
+                            step: this.currentStep,
+                            text: option.text,
+                            blockText: option.blockText,
+                            blockText1: option.blockText1,
+                        });
+                    }
+
+                    // if (option.nextStep == 'check_condition') {
+                    //     if (this.currentStep == 2) {
+                    //         if (this.selectedOptions[0].text == 'Yes') {
+                    //             this.currentStep = 4;
+                    //         }
+                    //         if (this.selectedOptions[1].text == 'Yes') {
+                    //             this.currentStep = 4;
+                    //         } else if (this.selectedOptions[1].text == 'No') {
+                    //             this.currentStep = 3;
+                    //         }
+                    //     } else {
+                    //         this.currentStep = option.nextStep;
+                    //     }
+                    // } else if (option.nextStep) {
+                    // this.currentStep = option.nextStep;
+                    this.currentStep++;
+                    // }
+
+                    if (this.currentStep == this.questions.length + 1) {
+                        this.submitted = true;
+                    }
+
+
+                    this.createPmc();
+                },
+                updateSelectedAccessories(questionIndex, optionIndex) {
+                    this.accessoriesBlock = '';
+                    const selectedOption = this.acessories[questionIndex].options[optionIndex];
+                    if (selectedOption.lineItem) {
+                        this.selectedAcessories[this.acessories[questionIndex].step - 1] = selectedOption
+                            .lineItem
+                    } else {
+                        this.selectedAcessories[this.acessories[questionIndex].step - 1] = ''
+                    }
+                    var c = 0;
+                    this.selectedAcessories.forEach(a => {
+                        if (a) {
+                            this.accessoriesBlock += c == 0 ? a : ('-' + a);
+                            c++;
+                        }
+                    })
+                    this.checkCase({
+                        step: 8
+                    });
+                },
+                checkDisable() {
+                    var fl = false;
+                    this.selectedOptions.forEach(op => {
+                        fl = op.step == this.currentStep;
+                    })
+                    return fl
+                },
+                nextStep() {
+                    this.currentStep++;
+                },
+                prevStep() {
+                    var bTemp = this.currentStep;
+                    if (this.blockStep == bTemp - 1) {
+                        this.currentStep -= 2;
+                    } else {
+                        this.currentStep -= 1;
+                    }
+
+                },
+                async submitForm() {
+                    try {
+                        const apiKey =
+                            'f6a81fa67f5b7d'; // Replace 'YOUR_API_KEY' with the actual API key you obtained
+                        const ipInfoResponse = await fetch('https://ipinfo.io/json', {
+                            headers: {
+                                Authorization: `Bearer ${apiKey}`
+                            }
+                        });
+                        const ipInfoData = await ipInfoResponse.json();
+                        this.userIP = ipInfoData.ip;
+
+                        // Fetch user location information (city, country, etc.) from ipinfo.io
+                        const locationResponse = await fetch(`https://ipinfo.io/${this.userIP}/json`, {
+                            headers: {
+                                Authorization: `Bearer ${apiKey}`
+                            }
+                        });
+                        const locationData = await locationResponse.json();
+                        this.userLocation = `${locationData.city}, ${locationData.country}`;
+
+                        console.log(this.userIP)
+                        console.log(this.userLocation)
+
+                    } catch (error) {
+                        console.error('Error fetching IP and location:', error);
+                    }
+
+                    this.submitted = true;
+                },
+                createPmc() {
+                    if (this.selectedOptions.length > 0) {
+                        this.selectedOptions.forEach(op => {
+                            this.checkCase(op);
+                        })
+                    }
+                },
+                checkCase(op) {
+                    switch (op.step) {
+                        case 1:
+                            if (op.text == 'Yes') {
+                                this.pmc[0] = 'D1000';
+                            }
+                            if (op.text == 'No') {
+                                this.pmc[0] = '';
+                            }
+                            break;
+                        case 2:
+                            if (this.pmc[0] == '') {
+                                this.pmc[0] = op.text == 'Yes' ? 'D1000' : ''
+                            }
+                            break;
+                        case 3:
+                            if (this.pmc[0] == '') {
+                                this.pmc[0] = op.text == 'Yes' ? 'D1000' : 'DS'
+                            }
+                            break;
+                        case 4:
+                            if (this.pmc[0] == 'D1000' && op.text == '30”') {
+                                this.pmc[0] = 'D1030';
+                            }
+                            if (this.pmc[0] == 'D1000' && op.text == '36”') {
+                                this.pmc[0] = 'D1036';
+                            }
+
+                            if (this.pmc[0] == 'DS' && op.text == '30”') {
+                                this.pmc[0] = 'DS-30';
+                            }
+                            if (this.pmc[0] == 'DS' && op.text == '36”') {
+                                this.pmc[0] = 'DS-36';
+                            }
+                            break;
+                        case 5:
+                            this.pmc[1] = op.blockText;
+                            if (op.blockText1) {
+                                this.pmc[2] = op.blockText1;
+                            } else {
+                                this.pmc[2] = null;
+                            }
+                            break;
+                        case 6:
+                            this.pmc[3] = op.blockText
+                            break;
+                        case 7:
+                            this.pmc[4] = op.blockText
+                            break;
+                        case 8:
+                            this.$set(this.pmc, 5, this.accessoriesBlock);
+                            break;
+                        default:
+                            // code block
+                    }
+                }
+            },
+            mounted: function () {
+                // this.submitForm();
+            },
+            beforeUpdate: function () {},
+        });
+    </script>
+</body>
+
+</html>
